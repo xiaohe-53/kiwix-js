@@ -29,18 +29,24 @@ define([], function() {
      * 
      * This is useful to inject images (and other dependencies) inside an article
      * 
-     * @param {Object} jQueryNode
+     * @param {Object} node
      * @param {String} nodeAttribute
-     * @param {Uint8Array} content
+     * @param {Uint8Array|String} content
      * @param {String} mimeType
+     * @param {Boolean} isDataUri
      */
-    function feedNodeWithBlob(jQueryNode, nodeAttribute, content, mimeType) {
-        var blob = new Blob([content], {type: mimeType});
-        var url = URL.createObjectURL(blob);
-        jQueryNode.on('load', function () {
-            URL.revokeObjectURL(url);
-        });
-        jQueryNode.attr(nodeAttribute, url);
+    function feedNodeWithBlob(node, nodeAttribute, content, mimeType, isDataUri) {
+        var uri;
+        if (isDataUri) {
+            uri = content;
+        } else {
+            var blob = new Blob([content], {type: mimeType});
+            uri = URL.createObjectURL(blob);
+        }
+        // node.on('load', function () {
+        //     URL.revokeObjectURL(uri);
+        // });
+        node.setAttribute(nodeAttribute, uri);
     }
 
     /**

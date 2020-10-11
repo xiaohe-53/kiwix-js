@@ -1519,17 +1519,23 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         }
         
         function loadImagesJQuery() {
-            $('#articleContent').contents().find('body').find('img[data-kiwixurl]').each(function() {
-                var image = $(this);
-                var imageUrl = image.attr("data-kiwixurl");
+            var images = iframeArticleContent.contentDocument.querySelectorAll('img[data-kiwixurl]');
+            Array.prototype.slice.call(images).forEach(function(image) {
+                var imageUrl = image.dataset.kiwixurl;
                 var title = decodeURIComponent(imageUrl);
                 // Increment pageState image counter to keep track of number of images sent to decompressor
                 pageState.imagesCount++;
                 selectedArchive.getDirEntryByTitle(title).then(function(dirEntry) {
                     selectedArchive.readBinaryFile(dirEntry, function (fileDirEntry, content) {
                         var mimetype = dirEntry.getMimetype();
-                        uiUtil.feedNodeWithBlob(image, 'src', content, mimetype);
                         pageState.imagesExtracted++;
+                        var webpMachine = iframeArticleContent.contentWindow.webpMachine;
+                        if (webpMachine && /webp/i.test(mimetype)) {
+                            return webpMachine.decode(content).then(function(dataURI) {
+                                uiUtil.feedNodeWithBlob(image, 'src', dataURI, mimetype, true);
+                            });
+                        }
+                        uiUtil.feedNodeWithBlob(image, 'src', content, mimetype, false);
                     });
                 }).catch(function (e) {
                     pageState.imagesCount--;

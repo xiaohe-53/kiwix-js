@@ -92,15 +92,15 @@ define(rqDef, function() {
         } else {
             cssElement.appendChild(document.createTextNode(cssContent));
         }
-        var mediaAttributeValue = link.attr('media');
+        var mediaAttributeValue = link.getAttribute('media');
         if (mediaAttributeValue) {
             cssElement.media = mediaAttributeValue;
         }
-        var disabledAttributeValue = link.attr('disabled');
+        var disabledAttributeValue = link.getAttribute('disabled');
         if (disabledAttributeValue) {
             cssElement.disabled = disabledAttributeValue;
         }
-        link.replaceWith(cssElement);
+        link.parentNode.replaceChild(cssElement, link);
     }
         
     var regexpRemoveUrlParameters = new RegExp(/([^?#]+)[?#].*$/);

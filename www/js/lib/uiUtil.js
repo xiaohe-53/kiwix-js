@@ -64,7 +64,8 @@ define(rqDef, function() {
             var blob = new Blob([content], {
                 type: mimeType
             });
-            var url = URL.createObjectURL(blob);
+            var docWindow = node.ownerDocument.defaultView || node.ownerDocument.parentWindow || window;
+            var url = docWindow.URL.createObjectURL(blob);
             if (callback) callback(url);
             node.addEventListener('load', function () {
                 URL.revokeObjectURL(url);
@@ -83,15 +84,15 @@ define(rqDef, function() {
      * 
      * @param {Element} link The DOM link element to replace with an inline style definition
      * @param {String} cssContent The decoded content of the linked CSS file
-     * @param {Document} targetDocument The document in which to create the new stylesheet
      */
-    function replaceCSSLinkWithInlineCSS (link, cssContent, targetDocument) {
-        var cssElement = document.createElement('style');
+    function replaceCSSLinkWithInlineCSS (link, cssContent) {
+        var doc = link.ownerDocument;
+        var cssElement = doc.createElement('style');
         cssElement.type = 'text/css';
         if (cssElement.styleSheet) {
             cssElement.styleSheet.cssText = cssContent;
         } else {
-            cssElement.appendChild(document.createTextNode(cssContent));
+            cssElement.appendChild(doc.createTextNode(cssContent));
         }
         var mediaAttributeValue = link.getAttribute('media');
         if (mediaAttributeValue) {

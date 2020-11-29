@@ -1426,7 +1426,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                         e.stopPropagation();
                         params.target = kiwixTarget;
                         articleContainer = thisWindow;
-                        if (e.ctrlKey || e.metaKey || !touchEnded) {
+                        if (e.ctrlKey || e.metaKey || !touchEnded || e.which === 2 || e.button === 4) {
                             articleContainer = null;
                             params.target = 'window';
                         }

@@ -1245,7 +1245,9 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     // the link. This is currently the case for epub and pdf files in Project Gutenberg ZIMs -- add any further types you need
     // to support to this regex. The "zip" has been added here as an example of how to support further filetypes
     var regexpDownloadLinks = /^.*?\.epub($|\?)|^.*?\.pdf($|\?)|^.*?\.zip($|\?)/i;
-    var iframeArticleContent;
+    // Placeholders for the document container
+    var articleContainer;
+    var articleDocument;
     
     /**
      * Display the the given HTML article in the web page,
@@ -1287,18 +1289,16 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         // Hide any alert box that was activated in uiUtil.displayFileDownloadAlert function
         $('#downloadAlert').hide();
 
-        if (iframeArticleContent) iframeArticleContent.close();
-        iframeArticleContent = window.open("article.html", "KiwixTab");
-        
-        iframeArticleContent.onload = function() {
-            iframeArticleContent.onload = function(){};
+        var windowLoaded = function() {
+            articleContainer.onload = function(){};
             $("#articleList").empty();
             $('#articleListHeaderMessage').empty();
             $('#articleListWithHeader').hide();
             $("#prefix").val("");
             
-            var iframeContentDocument = iframeArticleContent.document.documentElement;
-            if (!iframeContentDocument && window.location.protocol === 'file:') {
+            articleDocument = articleContainer.document.documentElement;
+            
+            if (!articleDocument && window.location.protocol === 'file:') {
                 alert("You seem to be opening kiwix-js with the file:// protocol, which is blocked by your browser for security reasons."
                         + "\nThe easiest way to run it is to download and run it as a browser extension (from the vendor store)."
                         + "\nElse you can open it through a web server : either through a local one (http://localhost/...) or through a remote one (but you need SSL : https://webserver/...)"
@@ -1307,10 +1307,9 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             }
             
             // Inject the new article's HTML into the iframe
-            var articleContent = iframeContentDocument;
-            articleContent.innerHTML = htmlArticle;
+            articleDocument.innerHTML = htmlArticle;
             
-            var docBody = articleContent.getElementsByTagName('body');
+            var docBody = articleDocument.getElementsByTagName('body');
             docBody = docBody ? docBody[0] : null;
             if (docBody) {
                 // Add any missing classes stripped from the <html> tag
@@ -1334,9 +1333,22 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             loadCSSJQuery();
             insertMediaBlobsJQuery();
         };
-     
+
         // Load the blank article to clear the iframe (NB iframe onload event runs *after* this)
-        // iframeArticleContent.location.href = "article.html";
+        if (!articleContainer) {
+            articleContainer = window.open('article.html', '_blank');
+            // We can't use the onload event with IE11 or Edge, so we have to check manually that the document has loaded
+            (function checkLoaded () {
+                var body = articleContainer.document.getElementsByTagName('body');
+                if (!body[0]) {
+                    setTimeout(checkLoaded, 50);
+                } else {
+                    windowLoaded();
+                }
+            })();
+        } else {
+            windowLoaded();
+        }
 
         function parseAnchorsJQuery() {
             var currentProtocol = location.protocol;
@@ -1346,8 +1358,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             var escapedUrl = encodeURIComponent(dirEntry.url).replace(/([\\$^.|?*+/()[{])/g, '\\$1');
             // Pattern to match a local anchor in an href even if prefixed by escaped url; will also match # on its own
             var regexpLocalAnchorHref = new RegExp('^(?:#|' + escapedUrl + '#)([^#]*$)');
-            var iframe = iframeArticleContent.document.documentElement;
-            Array.prototype.slice.call(iframe.querySelectorAll('a, area')).forEach(function (anchor) {
+            Array.prototype.slice.call(articleDocument.querySelectorAll('a, area')).forEach(function (anchor) {
                 // Attempts to access any properties of 'this' with malformed URLs causes app crash in Edge/UWP [kiwix-js #430]
                 try {
                     var testHref = anchor.href;
@@ -1427,7 +1438,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
 
         function loadNoScriptTags() {
             // For each noscript tag, we replace it with its content, so that the browser interprets it
-            $('#articleContent').contents().find('noscript').replaceWith(function () {
+            var noscript = articleDocument.querySelector('noscript');
+            if (noscript) noscript.replaceWith(function () {
                 // When javascript is enabled, browsers interpret the content of noscript tags as text
                 // (see https://html.spec.whatwg.org/multipage/scripting.html#the-noscript-element)
                 // So we can read this content with .textContent
@@ -1441,8 +1453,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             // These sections can be opened by clicking on them, but this is done with some javascript.
             // The code below is a workaround we still need for compatibility with ZIM files generated by mwoffliner in 2018.
             // A better fix has been made for more recent ZIM files, with the use of noscript tags : see https://github.com/openzim/mwoffliner/issues/324
-            var iframe = iframeArticleContent.document.documentElement;
-            var collapsedBlocks = iframe.querySelectorAll('.collapsible-block:not(.open-block), .collapsible-heading:not(.open-block)');
+            var collapsedBlocks = articleDocument.querySelectorAll('.collapsible-block:not(.open-block), .collapsible-heading:not(.open-block)');
             // Using decrementing loop to optimize performance : see https://stackoverflow.com/questions/3520688 
             for (var i = collapsedBlocks.length; i--;) {
                 collapsedBlocks[i].classList.add('open-block');
@@ -1450,7 +1461,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
 
             var cssCount = 0;
             var cssFulfilled = 0;
-            Array.prototype.slice.call(iframe.querySelectorAll('link[data-kiwixurl]')).forEach(function (link) {
+            Array.prototype.slice.call(articleDocument.querySelectorAll('link[data-kiwixurl]')).forEach(function (link) {
                 cssCount++;
                 var linkUrl = link.getAttribute("data-kiwixurl");
                 var title = uiUtil.removeUrlParameters(decodeURIComponent(linkUrl));
@@ -1524,8 +1535,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         // }
 
         function insertMediaBlobsJQuery() {
-            var iframe = iframeArticleContent.document.documentElement;
-            Array.prototype.slice.call(iframe.querySelectorAll('video, audio, source, track'))
+            Array.prototype.slice.call(articleDocument.querySelectorAll('video, audio, source, track'))
             .forEach(function(mediaSource) {
                 var source = mediaSource.getAttribute('src');
                 source = source ? uiUtil.deriveZimUrlFromRelativeUrl(source, baseUrl) : null;

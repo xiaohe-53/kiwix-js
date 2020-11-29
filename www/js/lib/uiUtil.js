@@ -81,10 +81,11 @@ define(rqDef, function() {
      * while copying some attributes of the original tag
      * Cf http://jonraasch.com/blog/javascript-style-node
      * 
-     * @param {Element} link from the DOM
-     * @param {String} cssContent
+     * @param {Element} link The DOM link element to replace with an inline style definition
+     * @param {String} cssContent The decoded content of the linked CSS file
+     * @param {Document} targetDocument The document in which to create the new stylesheet
      */
-    function replaceCSSLinkWithInlineCSS (link, cssContent) {
+    function replaceCSSLinkWithInlineCSS (link, cssContent, targetDocument) {
         var cssElement = document.createElement('style');
         cssElement.type = 'text/css';
         if (cssElement.styleSheet) {

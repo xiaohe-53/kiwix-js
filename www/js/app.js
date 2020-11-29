@@ -1416,7 +1416,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                         setTimeout(function() {
                             if (touchEnded) return;
                             anchor.click();
-                        }, 600);
+                        }, 800);
                     }, false);
                     anchor.addEventListener('touchend', function () {
                         touchEnded = true;

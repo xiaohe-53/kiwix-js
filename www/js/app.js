@@ -81,6 +81,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     params['appTheme'] = settingsStore.getItem('appTheme') || 'light'; // Currently implemented: light|dark|dark_invert|dark_mwInvert
     document.getElementById('appThemeSelect').value = params.appTheme;
     uiUtil.applyAppTheme(params.appTheme);
+    params['target'] = 'iframe'; //  <iframe|window> The target for article loads
 
     // An object to hold the current search and its state (allows cancellation of search across modules)
     appstate['search'] = {
@@ -1336,14 +1337,19 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
 
         // Load the blank article to clear the iframe (NB iframe onload event runs *after* this)
         
-        if (!articleContainer || articleContainer.closed) {
-            articleContainer = window.open('article.html');
+        if (params.target === 'iframe') {
+            articleContainer = document.getElementById('articleContent').contentWindow;
+        } else {
+            if (!articleContainer || articleContainer.closed || articleContainer.kiwixType !== params.target) {
+                articleContainer = window.open('article.html');
+            }
         }
         articleContainer.document.open('text/html', 'replace');
         articleContainer.document.write("<!DOCTYPE html>"); // Ensures browsers parse iframe in Standards mode
         articleContainer.document.write(htmlArticle);
         articleContainer.document.title = dirEntry.title;
         articleContainer.document.close();
+        articleContainer.kiwixType = params.target;
         // We can't use the onload event with IE11 or Edge for external windows, so we have to check manually that the document has loaded
         (function checkLoaded () {
             var body = articleContainer.document.getElementsByTagName('body');
@@ -1354,9 +1360,6 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                 windowLoaded();
             }
         })();
-        // } else {
-        //     windowLoaded();
-        // }
 
         function parseAnchorsJQuery() {
             var currentProtocol = location.protocol;
@@ -1404,10 +1407,33 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     }
                     // Add an onclick event to extract this article or file from the ZIM
                     // instead of following the link
+                    anchor.setAttribute('href', '#');
+                    var kiwixTarget = params.target;
+                    var thisWindow = articleContainer;
+                    var touchStartTimeStamp = 0;
+                    var touchEnded = true;
+                    anchor.addEventListener('touchstart', function (e) {
+                        touchStartTimeStamp = e.timeStamp;
+                        touchEnded = false;
+                        setTimeout(function() {
+                            if (touchEnded) return;
+                            anchor.click();
+                        }, 600);
+                    }, false);
+                    anchor.addEventListener('touchend', function (e) {
+                        touchEnded = true;
+                    }, false);
                     anchor.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        params.target = kiwixTarget;
+                        articleContainer = thisWindow;
+                        if (e.ctrlKey || e.metaKey || !touchEnded) {
+                            articleContainer = null;
+                            params.target = 'window';
+                        }
                         var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
                         goToArticle(zimUrl, downloadAttrValue, contentType);
-                        e.preventDefault();
                     });
                 }
             });

@@ -1410,17 +1410,15 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     anchor.setAttribute('href', '#');
                     var kiwixTarget = params.target;
                     var thisWindow = articleContainer;
-                    var touchStartTimeStamp = 0;
                     var touchEnded = true;
-                    anchor.addEventListener('touchstart', function (e) {
-                        touchStartTimeStamp = e.timeStamp;
+                    anchor.addEventListener('touchstart', function () {
                         touchEnded = false;
                         setTimeout(function() {
                             if (touchEnded) return;
                             anchor.click();
                         }, 600);
                     }, false);
-                    anchor.addEventListener('touchend', function (e) {
+                    anchor.addEventListener('touchend', function () {
                         touchEnded = true;
                     }, false);
                     anchor.addEventListener('click', function (e) {

@@ -81,7 +81,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     params['appTheme'] = settingsStore.getItem('appTheme') || 'light'; // Currently implemented: light|dark|dark_invert|dark_mwInvert
     document.getElementById('appThemeSelect').value = params.appTheme;
     uiUtil.applyAppTheme(params.appTheme);
-    params['target'] = 'iframe'; //  <iframe|window> The target for article loads
+    params['target'] = 'iframe'; // The target for article loads (this should always be 'iframe' and will only be changed as a result of user action)
 
     // An object to hold the current search and its state (allows cancellation of search across modules)
     appstate['search'] = {
@@ -1246,9 +1246,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     // the link. This is currently the case for epub and pdf files in Project Gutenberg ZIMs -- add any further types you need
     // to support to this regex. The "zip" has been added here as an example of how to support further filetypes
     var regexpDownloadLinks = /^.*?\.epub($|\?)|^.*?\.pdf($|\?)|^.*?\.zip($|\?)/i;
-    // Placeholders for the document container
-    var articleContainer;
-    var articleDocument;
+    // Placeholders for the article container and the documentElement of the article
+    var articleContainer, articleDocument;
     
     /**
      * Display the the given HTML article in the web page,
@@ -1335,25 +1334,24 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             insertMediaBlobsJQuery();
         };
 
-        // Load the blank article to clear the iframe (NB iframe onload event runs *after* this)
-        
-        if (params.target === 'iframe') {
-            articleContainer = document.getElementById('articleContent').contentWindow;
-        } else {
-            if (!articleContainer || articleContainer.closed || articleContainer.kiwixType !== params.target) {
-                articleContainer = window.open('article.html');
-            }
+        // If we do not have a valid handle to the article container (iframe or window), we need to set it now
+        if (!articleContainer || articleContainer.closed || articleContainer.kiwixType !== params.target) {
+            articleContainer = params.target === 'iframe' ?
+                articleContainer = document.getElementById('articleContent').contentWindow :
+                articleContainer = window.open('article.html', '_blank');
+            articleContainer.kiwixType = params.target;
         }
         articleContainer.document.open('text/html', 'replace');
         articleContainer.document.write("<!DOCTYPE html>"); // Ensures browsers parse iframe in Standards mode
         articleContainer.document.write(htmlArticle);
         articleContainer.document.title = dirEntry.title;
         articleContainer.document.close();
-        articleContainer.kiwixType = params.target;
+        //articleContainer.parentElement.onload = windowLoaded;
+        
         // We can't use the onload event with IE11 or Edge for external windows, so we have to check manually that the document has loaded
         (function checkLoaded () {
-            var body = articleContainer.document.getElementsByTagName('body');
-            if (!body[0]) {
+            var body = articleContainer.document.querySelector('body');
+            if (!body) {
                 setTimeout(checkLoaded, 100);
             } else {
                 articleContainer.document.title = dirEntry.title; 
@@ -1427,8 +1425,11 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                         params.target = kiwixTarget;
                         articleContainer = thisWindow;
                         if (e.ctrlKey || e.metaKey || !touchEnded || e.which === 2 || e.button === 4) {
-                            articleContainer = null;
+                            // We open the window immediately so that it is a direct result of user action (click)
+                            // and we'll populate it later - this avoids popup blockers
+                            articleContainer = window.open('article.html', '_blank');
                             params.target = 'window';
+                            articleContainer.kiwixType = params.target;
                         }
                         var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
                         goToArticle(zimUrl, downloadAttrValue, contentType);

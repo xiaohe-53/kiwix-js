@@ -1253,8 +1253,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
      * Display the the given HTML article in the web page,
      * and convert links to javascript calls
      * NB : in some error cases, the given title can be null, and the htmlArticle contains the error message
-     * @param {DirEntry} dirEntry
-     * @param {String} htmlArticle
+     * @param {DirEntry} dirEntry The Directory Entry of the article
+     * @param {String} htmlArticle The decoded HTML of the article
      */
     function displayArticleContentInContainer(dirEntry, htmlArticle) {
         if(! isDirEntryExpectedToBeDisplayed(dirEntry)){
@@ -1334,25 +1334,22 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             insertMediaBlobsJQuery();
         };
 
-        // If we do not have a valid handle to the article container (iframe or window), we need to set it now
-        if (!articleContainer || articleContainer.closed || articleContainer.kiwixType !== params.target) {
-            articleContainer = params.target === 'iframe' ?
-                articleContainer = document.getElementById('articleContent').contentWindow :
-                articleContainer = window.open('article.html', '_blank');
+        // We only need to set the articleContainer if we are targeting the iframe, because it will already be set
+        // in the click event of a ZIM anchor if the user ctrl-clicked a link (see parseAnchorsJQuery() below)
+        if (params.target === 'iframe') {
+            articleContainer = document.getElementById('articleContent').contentWindow;
             articleContainer.kiwixType = params.target;
         }
         articleContainer.document.open('text/html', 'replace');
-        articleContainer.document.write("<!DOCTYPE html>"); // Ensures browsers parse iframe in Standards mode
         articleContainer.document.write(htmlArticle);
         articleContainer.document.title = dirEntry.title;
         articleContainer.document.close();
-        //articleContainer.parentElement.onload = windowLoaded;
         
         // We can't use the onload event with IE11 or Edge for external windows, so we have to check manually that the document has loaded
         (function checkLoaded () {
             var body = articleContainer.document.querySelector('body');
             if (!body) {
-                setTimeout(checkLoaded, 100);
+                setTimeout(checkLoaded, 400);
             } else {
                 articleContainer.document.title = dirEntry.title; 
                 windowLoaded();

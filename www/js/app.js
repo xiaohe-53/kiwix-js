@@ -1289,6 +1289,48 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         // Hide any alert box that was activated in uiUtil.displayFileDownloadAlert function
         $('#downloadAlert').hide();
 
+        var windowLoaded = function() {
+            // articleContainer.onload = function(){};
+            $("#articleList").empty();
+            $('#articleListHeaderMessage').empty();
+            $('#articleListWithHeader').hide();
+            $("#prefix").val("");
+            
+            articleDocument = articleContainer.document.documentElement;
+            
+            if (!articleDocument && window.location.protocol === 'file:') {
+                alert("You seem to be opening kiwix-js with the file:// protocol, which is blocked by your browser for security reasons."
+                        + "\nThe easiest way to run it is to download and run it as a browser extension (from the vendor store)."
+                        + "\nElse you can open it through a web server : either through a local one (http://localhost/...) or through a remote one (but you need SSL : https://webserver/...)"
+                        + "\nAnother option is to force your browser to accept that (but you'll open a security breach) : on Chrome, you can start it with --allow-file-access-from-files command-line argument; on Firefox, you can set privacy.file_unique_origin to false in about:config");
+                return;
+            }
+            
+            var docBody = articleDocument.getElementsByTagName('body');
+            docBody = docBody ? docBody[0] : null;
+            if (docBody) {
+                // Add any missing classes stripped from the <html> tag
+                if (htmlCSS) docBody.classList.add(htmlCSS);
+                // Deflect drag-and-drop of ZIM file on the iframe to Config
+                docBody.addEventListener('dragover', handleIframeDragover);
+                docBody.addEventListener('drop', handleIframeDrop);
+            }
+            // Set the requested appTheme
+            uiUtil.applyAppTheme(params.appTheme);
+            // Allow back/forward in browser history
+            pushBrowserHistoryState(dirEntry.namespace + "/" + dirEntry.url);
+
+            parseAnchorsJQuery();
+            loadImagesJQuery();
+            // JavaScript is currently disabled, so we need to make the browser interpret noscript tags
+            // NB : if javascript is properly handled in jQuery mode in the future, this call should be removed
+            // and noscript tags should be ignored
+            loadNoScriptTags();
+            //loadJavaScriptJQuery();
+            loadCSSJQuery();
+            insertMediaBlobsJQuery();
+        };
+
         // We only need to set the articleContainer if we are targeting the iframe, because it will already be set
         // in the click event of a ZIM anchor if the user ctrl-clicked a link (see parseAnchorsJQuery() below)
         if (params.target === 'iframe') {
@@ -1298,48 +1340,13 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         articleContainer.document.open('text/html', 'replace');
         articleContainer.document.write(htmlArticle);
         articleContainer.document.close();
+        // setTimeout(function() {
+        //     articleContainer.document.title = dirEntry.title;
+        // }, 800);
+        // DEV: It is technically not necessary to load the window in a function, but since different versions of the loading algorithm
+        // have used an .onload event, or check document.readyState, it is useful to group the functions together like this
+        windowLoaded();
         
-        articleContainer.document.title = dirEntry.title;
-        $("#articleList").empty();
-        $('#articleListHeaderMessage').empty();
-        $('#articleListWithHeader').hide();
-        $("#prefix").val("");
-        articleDocument = articleContainer.document.documentElement;
-        
-        if (!articleDocument && window.location.protocol === 'file:') {
-            alert("You seem to be opening kiwix-js with the file:// protocol, which is blocked by your browser for security reasons."
-                    + "\nThe easiest way to run it is to download and run it as a browser extension (from the vendor store)."
-                    + "\nElse you can open it through a web server : either through a local one (http://localhost/...) or through a remote one (but you need SSL : https://webserver/...)"
-                    + "\nAnother option is to force your browser to accept that (but you'll open a security breach) : on Chrome, you can start it with --allow-file-access-from-files command-line argument; on Firefox, you can set privacy.file_unique_origin to false in about:config");
-            return;
-        }
-        
-        // Inject the new article's HTML into the iframe
-        // articleDocument.innerHTML = htmlArticle;
-        
-        var docBody = articleDocument.querySelector('body');
-        if (docBody) {
-            // Add any missing classes stripped from the <html> tag
-            if (htmlCSS) docBody.classList.add(htmlCSS);
-            // Deflect drag-and-drop of ZIM file on the iframe to Config
-            docBody.addEventListener('dragover', handleIframeDragover);
-            docBody.addEventListener('drop', handleIframeDrop);
-        }
-        // Set the requested appTheme
-        uiUtil.applyAppTheme(params.appTheme);
-        // Allow back/forward in browser history
-        pushBrowserHistoryState(dirEntry.namespace + "/" + dirEntry.url);
-
-        parseAnchorsJQuery();
-        loadImagesJQuery();
-        // JavaScript is currently disabled, so we need to make the browser interpret noscript tags
-        // NB : if javascript is properly handled in jQuery mode in the future, this call should be removed
-        // and noscript tags should be ignored
-        loadNoScriptTags();
-        //loadJavaScriptJQuery();
-        loadCSSJQuery();
-        insertMediaBlobsJQuery();
-    
         // Calculate the current article's ZIM baseUrl to use when processing relative links
         var baseUrl = dirEntry.namespace + '/' + dirEntry.url.replace(/[^/]+$/, '');
 

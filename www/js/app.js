@@ -82,6 +82,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     document.getElementById('appThemeSelect').value = params.appTheme;
     uiUtil.applyAppTheme(params.appTheme);
     params['target'] = 'iframe'; // The target for article loads (this should always be 'iframe' and will only be changed as a result of user action)
+    params['rightClickOpensTab'] = settingsStore.getItem('rightClickOpensTab') === 'true';
+    document.getElementById('rightClickOpensTabCheck').checked = params.rightClickOpensTab;
 
     // An object to hold the current search and its state (allows cancellation of search across modules)
     appstate['search'] = {
@@ -349,6 +351,10 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     $('input:checkbox[name=showUIAnimations]').on('change', function () {
         params.showUIAnimations = this.checked ? true : false;
         settingsStore.setItem('showUIAnimations', params.showUIAnimations, Infinity);
+    });
+    document.getElementById('rightClickOpensTabCheck').addEventListener('change', function (e) {
+        params.rightClickOpensTab = e.target.checked;
+        settingsStore.setItem('rightClickOpensTab', params.rightClickOpensTab, Infinity);
     });
     document.getElementById('appThemeSelect').addEventListener('change', function (e) {
         params.appTheme = e.target.value;
@@ -1400,6 +1406,13 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     // Add an onclick event to extract this article or file from the ZIM
                     // instead of following the link
                     anchor.setAttribute('href', '#');
+                    var openNewWindow = function() {
+                        // We open the window immediately so that it is a direct result of user action (click)
+                        // and we'll populate it later - this avoids popup blockers
+                        articleContainer = window.open('article.html', '_blank');
+                        params.target = 'window';
+                        articleContainer.kiwixType = params.target;
+                    };
                     var kiwixTarget = params.target;
                     var thisWindow = articleContainer;
                     var touchEnded = true;
@@ -1413,17 +1426,20 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     anchor.addEventListener('touchend', function () {
                         touchEnded = true;
                     }, false);
+                    anchor.addEventListener('contextmenu', function (e) {
+                        if (!params.rightClickOpensTab) return;
+                        e.preventDefault();
+                        openNewWindow();
+                        var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
+                        goToArticle(zimUrl, downloadAttrValue, contentType);
+                    });
                     anchor.addEventListener('click', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
                         params.target = kiwixTarget;
                         articleContainer = thisWindow;
                         if (e.ctrlKey || e.metaKey || !touchEnded || e.which === 2 || e.button === 4) {
-                            // We open the window immediately so that it is a direct result of user action (click)
-                            // and we'll populate it later - this avoids popup blockers
-                            articleContainer = window.open('article.html', '_blank');
-                            params.target = 'window';
-                            articleContainer.kiwixType = params.target;
+                            openNewWindow();
                         }
                         var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
                         goToArticle(zimUrl, downloadAttrValue, contentType);

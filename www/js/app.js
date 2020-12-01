@@ -1408,21 +1408,22 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     anchor.setAttribute('href', '#');
                     var kiwixTarget = params.target;
                     var thisWindow = articleContainer;
-                    var touchEnded = true;
+                    var touched = false;
                     anchor.addEventListener('touchstart', function () {
                         if (!params.rightClickOpensTab) return;
-                        touchEnded = false;
+                        touched = true;
                         setTimeout(function() {
-                            if (touchEnded) return;
+                            if (!touched) return;
                             anchor.click();
                         }, 600);
                     }, false);
                     anchor.addEventListener('touchend', function () {
-                        touchEnded = true;
+                        touched = false;
                     }, false);
                     anchor.addEventListener('contextmenu', function (e) {
                         if (!params.rightClickOpensTab) return;
                         e.preventDefault();
+                        touched = true;
                         anchor.click();
                     });
                     anchor.addEventListener('click', function (e) {
@@ -1430,12 +1431,13 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                         e.stopPropagation();
                         params.target = kiwixTarget;
                         articleContainer = thisWindow;
-                        if (e.ctrlKey || e.metaKey || !touchEnded || e.which === 2 || e.button === 4) {
+                        if (e.ctrlKey || e.metaKey || touched || e.which === 2 || e.button === 4) {
                             // We open the window immediately so that it is a direct result of user action (click)
                             // and we'll populate it later - this avoids popup blockers
                             articleContainer = window.open('article.html', '_blank');
                             params.target = 'window';
-                            articleContainer.kiwixType = params.target;;
+                            articleContainer.kiwixType = params.target;
+                            articleContainer.blur();
                         }
                         var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
                         goToArticle(zimUrl, downloadAttrValue, contentType);

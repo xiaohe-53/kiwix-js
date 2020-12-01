@@ -222,6 +222,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         }
     });
     $("#btnRandomArticle").on("click", function() {
+        // In jQuery mode, only load random content in iframe (not tab or window)
+        params.target = 'iframe';
         $('#prefix').val("");
         goToRandomArticle();
         $("#welcomeText").hide();
@@ -819,6 +821,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             resetCssCache();
             selectedArchive = zimArchiveLoader.loadArchiveFromDeviceStorage(selectedStorage, archiveDirectory, function () {
                 settingsStore.setItem("lastSelectedArchive", archiveDirectory, Infinity);
+                params.target = 'iframe';
                 // The archive is set : go back to home page to start searching
                 $("#btnHome").click();
             });
@@ -906,6 +909,9 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         }
         resetCssCache();
         selectedArchive = zimArchiveLoader.loadArchiveFromFiles(files, function () {
+            // Ensure that the new ZIM output is initially sent to the iframe (e.g. if the last article was loaded in a window)
+            // (this only affects jQuery mode)
+            params.target = 'iframe';
             // The archive is set : go back to home page to start searching
             $("#btnHome").click();
             document.getElementById('downloadInstruction').style.display = 'none';

@@ -1417,11 +1417,12 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     var thisWindow = articleContainer;
                     var touchEnded = true;
                     anchor.addEventListener('touchstart', function () {
+                        if (!params.rightClickOpensTab) return;
                         touchEnded = false;
                         setTimeout(function() {
                             if (touchEnded) return;
                             anchor.click();
-                        }, 800);
+                        }, 600);
                     }, false);
                     anchor.addEventListener('touchend', function () {
                         touchEnded = true;

@@ -256,6 +256,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     });
     // Top menu :
     $('#btnHome').on('click', function() {
+        // In jQuery mode, only load landing page in iframe (not tab or window)
+        params.target = 'iframe';
         // Highlight the selected section in the navbar
         $('#liHomeNav').attr("class","active");
         $('#liConfigureNav').attr("class","");

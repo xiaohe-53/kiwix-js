@@ -81,7 +81,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     params['appTheme'] = settingsStore.getItem('appTheme') || 'light'; // Currently implemented: light|dark|dark_invert|dark_mwInvert
     document.getElementById('appThemeSelect').value = params.appTheme;
     uiUtil.applyAppTheme(params.appTheme);
-    params['target'] = 'iframe'; // The target for article loads (this should always be 'iframe' and will only be changed as a result of user action)
+    // A setting that determines whether right-click or long-press of a ZIM link opens a new window/tab
     params['rightClickOpensTab'] = settingsStore.getItem('rightClickOpensTab') === 'true';
     document.getElementById('rightClickOpensTabCheck').checked = params.rightClickOpensTab;
 
@@ -91,6 +91,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         'status': '',  // The status of the search: ''|'init'|'interim'|'cancelled'|'complete'
         'type': ''    // The type of the search: 'basic'|'full' (set automatically in search algorithm)
     };
+    // The target for article loads (this should always be 'iframe' initially, and will only be changed as a result of user action)
+    appstate['target'] = 'iframe';
     
     // Define globalDropZone (universal drop area) and configDropZone (highlighting area on Config page)
     var globalDropZone = document.getElementById('search-article');
@@ -225,7 +227,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     });
     $("#btnRandomArticle").on("click", function() {
         // In jQuery mode, only load random content in iframe (not tab or window)
-        params.target = 'iframe';
+        appstate.target = 'iframe';
         $('#prefix').val("");
         goToRandomArticle();
         $("#welcomeText").hide();
@@ -257,7 +259,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     // Top menu :
     $('#btnHome').on('click', function() {
         // In jQuery mode, only load landing page in iframe (not tab or window)
-        params.target = 'iframe';
+        appstate.target = 'iframe';
         // Highlight the selected section in the navbar
         $('#liHomeNav').attr("class","active");
         $('#liConfigureNav').attr("class","");
@@ -831,7 +833,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                 settingsStore.setItem("lastSelectedArchive", archiveDirectory, Infinity);
                 // Ensure that the new ZIM output is initially sent to the iframe (e.g. if the last article was loaded in a window)
                 // (this only affects jQuery mode)
-                params.target = 'iframe';
+                appstate.target = 'iframe';
                 // The archive is set : go back to home page to start searching
                 $("#btnHome").click();
             });
@@ -921,7 +923,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         selectedArchive = zimArchiveLoader.loadArchiveFromFiles(files, function () {
             // Ensure that the new ZIM output is initially sent to the iframe (e.g. if the last article was loaded in a window)
             // (this only affects jQuery mode)
-            params.target = 'iframe';
+            appstate.target = 'iframe';
             // The archive is set : go back to home page to start searching
             $("#btnHome").click();
             document.getElementById('downloadInstruction').style.display = 'none';
@@ -1347,11 +1349,12 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
 
         // We only need to set the articleContainer if we are targeting the iframe, because it will already be set
         // in the click event of a ZIM anchor if the user ctrl-clicked a link (see parseAnchorsJQuery() below)
-        if (params.target === 'iframe') {
+        if (appstate.target === 'iframe') {
             // Tell jQuery we're removing the iframe document: clears jQuery cache and prevents memory leaks [kiwix-js #361]
             $('#articleContent').contents().remove();
             articleContainer = document.getElementById('articleContent').contentWindow;
-            articleContainer.kiwixType = params.target;
+            // Ensure the target is permanently stored as a property of the container (since appstate.target can change)
+            articleContainer.kiwixType = appstate.target;
         }
         articleContainer.document.open('text/html', 'replace');
         articleContainer.document.write(htmlArticle);
@@ -1412,7 +1415,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     // DEV: We need to use the '#' location trick here for cross-browser compatibility with opening a new tab/window
                     anchor.setAttribute('href', '#');
                     // Store the current values, as they may be changed if user switches to another tab before returning to this one
-                    var kiwixTarget = params.target;
+                    var kiwixTarget = appstate.target;
                     var thisWindow = articleContainer;
                     // Establish a variable for tracking long press
                     var touched = false;
@@ -1440,15 +1443,15 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                         e.preventDefault();
                         e.stopPropagation();
                         // Restore original values for this window/tab
-                        params.target = kiwixTarget;
+                        appstate.target = kiwixTarget;
                         articleContainer = thisWindow;
                         // This detects Ctrl-click, Command-click, the long-press event, and middle-click
                         if (e.ctrlKey || e.metaKey || touched || e.which === 2 || e.button === 4) {
                             // We open the new window immediately so that it is a direct result of user action (click)
                             // and we'll populate it later - this avoids popup blockers
                             articleContainer = window.open('article.html', '_blank');
-                            params.target = 'window';
-                            articleContainer.kiwixType = params.target;
+                            appstate.target = 'window';
+                            articleContainer.kiwixType = appstate.target;
                         }
                         var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
                         goToArticle(zimUrl, downloadAttrValue, contentType);

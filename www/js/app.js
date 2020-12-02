@@ -829,6 +829,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             resetCssCache();
             selectedArchive = zimArchiveLoader.loadArchiveFromDeviceStorage(selectedStorage, archiveDirectory, function () {
                 settingsStore.setItem("lastSelectedArchive", archiveDirectory, Infinity);
+                // Ensure that the new ZIM output is initially sent to the iframe (e.g. if the last article was loaded in a window)
+                // (this only affects jQuery mode)
                 params.target = 'iframe';
                 // The archive is set : go back to home page to start searching
                 $("#btnHome").click();
@@ -1407,13 +1409,17 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     }
                     // Add an onclick event to extract this article or file from the ZIM
                     // instead of following the link
+                    // DEV: We need to use the '#' location trick here for cross-browser compatibility with opening a new tab/window
                     anchor.setAttribute('href', '#');
+                    // Store the current values, as they may be changed if user switches to another tab before returning to this one
                     var kiwixTarget = params.target;
                     var thisWindow = articleContainer;
+                    // Establish a variable for tracking long press
                     var touched = false;
                     anchor.addEventListener('touchstart', function () {
                         if (!params.rightClickOpensTab) return;
                         touched = true;
+                        // The link will be clicked if the user long-presses for more than 600ms (if the option is enabled)
                         setTimeout(function() {
                             if (!touched) return;
                             anchor.click();
@@ -1422,24 +1428,27 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     anchor.addEventListener('touchend', function () {
                         touched = false;
                     }, false);
+                    // This detects right-click in all browsers (only if the option is enabled)
                     anchor.addEventListener('contextmenu', function (e) {
                         if (!params.rightClickOpensTab) return;
                         e.preventDefault();
                         touched = true;
                         anchor.click();
                     });
+                    // The main click routine (called by other events above as well)
                     anchor.addEventListener('click', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
+                        // Restore original values for this window/tab
                         params.target = kiwixTarget;
                         articleContainer = thisWindow;
+                        // This detects Ctrl-click, Command-click, the long-press event, and middle-click
                         if (e.ctrlKey || e.metaKey || touched || e.which === 2 || e.button === 4) {
-                            // We open the window immediately so that it is a direct result of user action (click)
+                            // We open the new window immediately so that it is a direct result of user action (click)
                             // and we'll populate it later - this avoids popup blockers
                             articleContainer = window.open('article.html', '_blank');
                             params.target = 'window';
                             articleContainer.kiwixType = params.target;
-                            articleContainer.blur();
                         }
                         var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
                         goToArticle(zimUrl, downloadAttrValue, contentType);

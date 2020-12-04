@@ -134,6 +134,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         $("#welcomeText").hide();
         $('.alert').hide();
         $("#searchingArticles").show();
+        // Ensure selected search item is displayed in the iframe, not a new window or tab
+        appstate.target = 'iframe';
         pushBrowserHistoryState(null, prefix);
         // Initiate the search
         searchDirEntriesFromPrefix(prefix);
@@ -1437,6 +1439,13 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                         e.preventDefault();
                         touched = true;
                         anchor.click();
+                    });
+                    anchor.addEventListener('mousedown', function(e) {
+                        if (e.which === 2 || e.button === 4) {
+                            e.preventDefault();
+                            touched = true;
+                            anchor.click();
+                        }
                     });
                     // The main click routine (called by other events above as well)
                     anchor.addEventListener('click', function (e) {

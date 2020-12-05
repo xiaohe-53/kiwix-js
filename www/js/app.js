@@ -723,11 +723,14 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
 
 
     // Display the article when the user goes back in the browser history
-    window.onpopstate = function(event) {
+    var historyPop = function(event) {
         if (event.state) {
             var title = event.state.title;
             var titleSearch = event.state.titleSearch;
-            
+            appstate.target = event.target.kiwixType;
+            // Select the correct window to which to write the popped history
+            // in case user siwtches to a tab and navigates history without first clicking on a link
+            if (appstate.target === 'window') articleContainer = event.target;
             $('#prefix').val("");
             $("#welcomeText").hide();
             $("#searchingArticles").hide();
@@ -749,6 +752,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             }
         }
     };
+
+    window.onpopstate = historyPop;
     
     /**
      * Populate the drop-down list of archives with the given list
@@ -1357,10 +1362,13 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             articleContainer = document.getElementById('articleContent').contentWindow;
             // Ensure the target is permanently stored as a property of the container (since appstate.target can change)
             articleContainer.kiwixType = appstate.target;
+            // Storing the window type at top level window helps us with history manipulation
+            window.kiwixType = appstate.target;
         }
         articleContainer.document.open('text/html', 'replace');
         articleContainer.document.write(htmlArticle);
         articleContainer.document.close();
+        if (appstate.target === 'window') articleContainer.onpopstate = historyPop;
         // DEV: It is technically not necessary to load the window in a function, but since different versions of the loading algorithm
         // have used an .onload event, or check document.readyState, it is useful to group the functions together like this
         windowLoaded();
@@ -1644,16 +1652,17 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     /**
      * Changes the URL of the browser page, so that the user might go back to it
      * 
-     * @param {String} title
-     * @param {String} titleSearch
+     * @param {String} title The title of the article to store (if storing an article)
+     * @param {String} titleSearch The title of the search (if storing a search)
      */
     function pushBrowserHistoryState(title, titleSearch) {
+        var targetWin = appstate.target === 'iframe' ? window : articleContainer;
         var stateObj = {};
         var urlParameters;
         var stateLabel;
         if (title && !(""===title)) {
             // Prevents creating a double history for the same page
-            if (history.state && history.state.title === title) return;
+            if (targetWin.history.state && targetWin.history.state.title === title) return;
             stateObj.title = title;
             urlParameters = "?title=" + title;
             stateLabel = "Wikipedia Article : " + title;
@@ -1663,10 +1672,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             urlParameters = "?titleSearch=" + titleSearch;
             stateLabel = "Wikipedia search : " + titleSearch;
         }
-        else {
-            return;
-        }
-        window.history.pushState(stateObj, stateLabel, urlParameters);
+        else return;
+        targetWin.history.pushState(stateObj, stateLabel, urlParameters);
     }
 
 

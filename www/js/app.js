@@ -1673,7 +1673,13 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             stateLabel = "Wikipedia search : " + titleSearch;
         }
         else return;
-        targetWin.history.pushState(stateObj, stateLabel, urlParameters);
+        // Edge Legacy and IE cannot push history to another window/tab and produce an exception
+        // independent navigation is therefore disabled for these browsers
+        try {
+            targetWin.history.pushState(stateObj, stateLabel, urlParameters);
+        } catch (error) {
+            history.pushState(stateObj, stateLabel, urlParameters);
+        }
     }
 
 

@@ -1369,8 +1369,9 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         articleContainer.document.write(htmlArticle);
         articleContainer.document.close();
         if (appstate.target === 'window') articleContainer.onpopstate = historyPop;
-        // DEV: It is technically not necessary to load the window in a function, but since different versions of the loading algorithm
-        // have used an .onload event, or check document.readyState, it is useful to group the functions together like this
+        // DEV: we can no longer use articleContainer.onload to run this function because IE (and Edge Legacy) do not provide the
+        // onload event for newly opened windows/tabs. However, document.write followed by document.close is synchronous, so an
+        // event loader should not be necessary
         windowLoaded();
         
         // Calculate the current article's ZIM baseUrl to use when processing relative links

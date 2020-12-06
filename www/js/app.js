@@ -81,7 +81,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
     params['appTheme'] = settingsStore.getItem('appTheme') || 'light'; // Currently implemented: light|dark|dark_invert|dark_mwInvert
     document.getElementById('appThemeSelect').value = params.appTheme;
     uiUtil.applyAppTheme(params.appTheme);
-    // A setting that determines whether right-click or long-press of a ZIM link opens a new window/tab
+    // A setting that determines whether right-click/long-press of a ZIM link opens a new window/tab
     params['rightClickOpensTab'] = settingsStore.getItem('rightClickOpensTab') === 'true';
     document.getElementById('rightClickOpensTabCheck').checked = params.rightClickOpensTab;
 
@@ -728,8 +728,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             var title = event.state.title;
             var titleSearch = event.state.titleSearch;
             appstate.target = event.target.kiwixType;
-            // Select the correct window to which to write the popped history
-            // in case user siwtches to a tab and navigates history without first clicking on a link
+            // Select the correct window to which to write the popped history in case the user
+            // siwtches to a tab and navigates history without first clicking on a link
             if (appstate.target === 'window') articleContainer = event.target;
             $('#prefix').val("");
             $("#welcomeText").hide();
@@ -1354,8 +1354,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             insertMediaBlobsJQuery();
         };
 
-        // We only need to set the articleContainer if we are targeting the iframe, because it will already be set
-        // in the click event of a ZIM anchor if the user ctrl-clicked a link (see parseAnchorsJQuery() below)
+        // For articles loaded in the iframe, we need to set the articleContainer (if the user is opening a new tab/window,
+        // then the articleContainer has already been set in the click event of the ZIM link)
         if (appstate.target === 'iframe') {
             // Tell jQuery we're removing the iframe document: clears jQuery cache and prevents memory leaks [kiwix-js #361]
             $('#articleContent').contents().remove();
@@ -1673,7 +1673,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             stateLabel = "Wikipedia search : " + titleSearch;
         }
         else return;
-        // Edge Legacy and IE cannot push history to another window/tab and produce an exception
+        // Edge Legacy and IE cannot push history state to another window/tab and produce an exception;
         // independent navigation is therefore disabled for these browsers
         try {
             targetWin.history.pushState(stateObj, stateLabel, urlParameters);

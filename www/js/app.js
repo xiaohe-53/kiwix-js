@@ -1406,75 +1406,82 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     anchor.target = '_blank';
                 } else {
                     // It's a link to an article or file in the ZIM
-                    var uriComponent = uiUtil.removeUrlParameters(href);
-                    var contentType;
-                    var downloadAttrValue;
-                    // Some file types need to be downloaded rather than displayed (e.g. *.epub)
-                    // The HTML download attribute can be Boolean or a string representing the specified filename for saving the file
-                    // For Boolean values, getAttribute can return any of the following: download="" download="download" download="true"
-                    // So we need to test hasAttribute first: see https://developer.mozilla.org/en-US/docs/Web/API/Element/getAttribute
-                    // However, we cannot rely on the download attribute having been set, so we also need to test for known download file types
-                    var isDownloadableLink = anchor.hasAttribute('download') || regexpDownloadLinks.test(href);
-                    if (isDownloadableLink) {
-                        downloadAttrValue = anchor.getAttribute('download');
-                        // Normalize the value to a true Boolean or a filename string or true if there is no download attribute
-                        downloadAttrValue = /^(download|true|\s*)$/i.test(downloadAttrValue) || downloadAttrValue || true;
-                        contentType = anchor.getAttribute('type');
-                    }
-                    // Add an onclick event to extract this article or file from the ZIM
-                    // instead of following the link
-                    // DEV: We need to use the '#' location trick here for cross-browser compatibility with opening a new tab/window
-                    anchor.setAttribute('href', '#');
-                    // Store the current values, as they may be changed if user switches to another tab before returning to this one
-                    var kiwixTarget = appstate.target;
-                    var thisWindow = articleContainer;
-                    // Establish a variable for tracking long press
-                    var touched = false;
-                    anchor.addEventListener('touchstart', function () {
-                        if (!params.rightClickOpensTab) return;
-                        touched = true;
-                        // The link will be clicked if the user long-presses for more than 600ms (if the option is enabled)
-                        setTimeout(function() {
-                            if (!touched) return;
-                            anchor.click();
-                        }, 600);
-                    }, false);
-                    anchor.addEventListener('touchend', function () {
-                        touched = false;
-                    }, false);
-                    // This detects right-click in all browsers (only if the option is enabled)
-                    anchor.addEventListener('contextmenu', function (e) {
-                        if (!params.rightClickOpensTab) return;
-                        e.preventDefault();
-                        touched = true;
-                        anchor.click();
-                    });
-                    anchor.addEventListener('mousedown', function(e) {
-                        if (e.which === 2 || e.button === 4) {
-                            e.preventDefault();
-                            touched = true;
-                            anchor.click();
-                        }
-                    });
-                    // The main click routine (called by other events above as well)
-                    anchor.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // Restore original values for this window/tab
-                        appstate.target = kiwixTarget;
-                        articleContainer = thisWindow;
-                        // This detects Ctrl-click, Command-click, the long-press event, and middle-click
-                        if (e.ctrlKey || e.metaKey || touched || e.which === 2 || e.button === 4) {
-                            // We open the new window immediately so that it is a direct result of user action (click)
-                            // and we'll populate it later - this avoids popup blockers
-                            articleContainer = window.open('article.html', '_blank');
-                            appstate.target = 'window';
-                            articleContainer.kiwixType = appstate.target;
-                        }
-                        var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
-                        goToArticle(zimUrl, downloadAttrValue, contentType);
-                    });
+                    addListenersToAnchor(anchor, href);
                 }
+            });
+        }
+
+        /**
+         * Add event listeners to the anchor to extract the linked article or file from the ZIM instead
+         * of following links
+         * @param {Node} a The anchor to which event listeners will be attached
+         * @param {String} href The href of the anchor 
+         */
+        function addListenersToAnchor(a, href) {
+            var uriComponent = uiUtil.removeUrlParameters(href);
+            var contentType;
+            var downloadAttrValue;
+            // Some file types need to be downloaded rather than displayed (e.g. *.epub)
+            // The HTML download attribute can be Boolean or a string representing the specified filename for saving the file
+            // For Boolean values, getAttribute can return any of the following: download="" download="download" download="true"
+            // So we need to test hasAttribute first: see https://developer.mozilla.org/en-US/docs/Web/API/Element/getAttribute
+            // However, we cannot rely on the download attribute having been set, so we also need to test for known download file types
+            var isDownloadableLink = a.hasAttribute('download') || regexpDownloadLinks.test(href);
+            if (isDownloadableLink) {
+                downloadAttrValue = a.getAttribute('download');
+                // Normalize the value to a true Boolean or a filename string or true if there is no download attribute
+                downloadAttrValue = /^(download|true|\s*)$/i.test(downloadAttrValue) || downloadAttrValue || true;
+                contentType = a.getAttribute('type');
+            }
+            // DEV: We need to use the '#' location trick here for cross-browser compatibility with opening a new tab/window
+            a.setAttribute('href', '#');// Store the current values, as they may be changed if user switches to another tab before returning to this one
+            var kiwixTarget = appstate.target;
+            var thisWindow = articleContainer;
+            // Establish a variable for tracking long press
+            var touched = false;
+            a.addEventListener('touchstart', function () {
+                if (!params.rightClickOpensTab) return;
+                touched = true;
+                // The link will be clicked if the user long-presses for more than 600ms (if the option is enabled)
+                setTimeout(function() {
+                    if (!touched) return;
+                    a.click();
+                }, 600);
+            }, false);
+            a.addEventListener('touchend', function () {
+                touched = false;
+            }, false);
+            // This detects right-click in all browsers (only if the option is enabled)
+            a.addEventListener('contextmenu', function (e) {
+                if (!params.rightClickOpensTab) return;
+                e.preventDefault();
+                touched = true;
+                a.click();
+            });
+            a.addEventListener('mousedown', function(e) {
+                if (e.which === 2 || e.button === 4) {
+                    e.preventDefault();
+                    touched = true;
+                    a.click();
+                }
+            });
+            // The main click routine (called by other events above as well)
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                // Restore original values for this window/tab
+                appstate.target = kiwixTarget;
+                articleContainer = thisWindow;
+                // This detects Ctrl-click, Command-click, the long-press event, and middle-click
+                if (e.ctrlKey || e.metaKey || touched || e.which === 2 || e.button === 4) {
+                    // We open the new window immediately so that it is a direct result of user action (click)
+                    // and we'll populate it later - this avoids popup blockers
+                    articleContainer = window.open('article.html', '_blank');
+                    appstate.target = 'window';
+                    articleContainer.kiwixType = appstate.target;
+                }
+                var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
+                goToArticle(zimUrl, downloadAttrValue, contentType);
             });
         }
         

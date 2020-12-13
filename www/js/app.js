@@ -1462,6 +1462,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             a.addEventListener('contextmenu', function (e) {
                 if (!params.rightClickOpensTab) return;
                 e.preventDefault();
+                e.stopPropagation();
                 touched = true;
                 a.click();
             });

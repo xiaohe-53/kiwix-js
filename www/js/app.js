@@ -1354,7 +1354,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             insertMediaBlobsJQuery();
         };
 
-        // For articles loaded in the iframe, we need to set the articleContainer (if the user is opening a new tab/window,
+        // For articles loaded in the iframe, we need to set the articleContainer (but if the user is opening a new tab/window,
         // then the articleContainer has already been set in the click event of the ZIM link)
         if (appstate.target === 'iframe') {
             // Tell jQuery we're removing the iframe document: clears jQuery cache and prevents memory leaks [kiwix-js #361]
@@ -1675,7 +1675,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         }
         else return;
         // Edge Legacy and IE cannot push history state to another window/tab and produce an exception;
-        // independent navigation is therefore disabled for these browsers
+        // independent navigation history is therefore disabled for these browsers
         try {
             targetWin.history.pushState(stateObj, stateLabel, urlParameters);
         } catch (error) {

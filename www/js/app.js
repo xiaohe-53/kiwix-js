@@ -1365,6 +1365,14 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             // Storing the window type at top level window helps us with history manipulation
             window.kiwixType = appstate.target;
         }
+                
+        // Calculate the current article's encoded ZIM baseUrl to use when processing relative links
+        var baseUrl = (dirEntry.namespace + '/' + dirEntry.url.replace(/[^/]+$/, ''))
+        // URI-encode anything that is not a '/'
+        .replace(/[^\/]+/g, function(m) {
+            return encodeURIComponent(m);
+        });
+        // Write article html to the article container
         articleContainer.document.open('text/html', 'replace');
         articleContainer.document.write(htmlArticle);
         articleContainer.document.close();
@@ -1373,9 +1381,6 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         // onload event for newly opened windows/tabs. However, document.write followed by document.close is synchronous, so an
         // event loader should not be necessary
         windowLoaded();
-        
-        // Calculate the current article's ZIM baseUrl to use when processing relative links
-        var baseUrl = dirEntry.namespace + '/' + dirEntry.url.replace(/[^/]+$/, '');
 
         function parseAnchorsJQuery() {
             var currentProtocol = location.protocol;
@@ -1409,6 +1414,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     addListenersToAnchor(anchor, href);
                 }
             });
+            // Add event listeners to the main document so user can open current document in new tab or window
+            addListenersToAnchor(articleDocument, encodeURIComponent(dirEntry.url.replace(/[^/]+\//g, '')));
         }
 
         /**
@@ -1479,12 +1486,15 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     articleContainer = window.open('article.html', '_blank');
                     appstate.target = 'window';
                     articleContainer.kiwixType = appstate.target;
-                }
+                } else if (a.tagName !== 'A') {
+                    // If we are adding event listeners to the document element, do not navigate with an ordinary click 
+                    return;
+                } 
                 var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
                 goToArticle(zimUrl, downloadAttrValue, contentType);
             });
         }
-        
+
         function loadImagesJQuery() {
             // Make an array from the images that need to be processed
             var images = Array.prototype.slice.call(articleDocument.querySelectorAll('img[data-kiwixurl]'));

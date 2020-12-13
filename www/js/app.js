@@ -1369,7 +1369,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         // Calculate the current article's encoded ZIM baseUrl to use when processing relative links
         var baseUrl = (dirEntry.namespace + '/' + dirEntry.url.replace(/[^/]+$/, ''))
         // URI-encode anything that is not a '/'
-        .replace(/[^\/]+/g, function(m) {
+        .replace(/[^/]+/g, function(m) {
             return encodeURIComponent(m);
         });
         // Write article html to the article container

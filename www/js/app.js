@@ -1313,6 +1313,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
 
         var windowLoaded = function() {
             // articleContainer.onload = function(){};
+            if (articleContainer.document.body) articleContainer.document.body.hidden = false;
             articleDocument = articleContainer.document.documentElement;
             
             $("#articleList").empty();
@@ -1375,13 +1376,15 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         // Write article html to the article container
         articleContainer.document.open('text/html', 'replace');
         articleContainer.document.write(htmlArticle);
+        // Hide the document to avoid display flash before stylesheets are loaded
+        if (articleContainer.document.body) articleContainer.document.body.hidden = true;
         articleContainer.document.close();
         if (appstate.target === 'window') articleContainer.onpopstate = historyPop;
         // DEV: we can no longer use articleContainer.onload to run this function because IE (and Edge Legacy) do not provide the
         // onload event for newly opened windows/tabs. However, document.write followed by document.close is synchronous, so an
         // event loader should not be necessary
-        windowLoaded();
-
+        setTimeout(windowLoaded, 0);
+        
         function parseAnchorsJQuery() {
             var currentProtocol = location.protocol;
             var currentHost = location.host;
@@ -1475,8 +1478,6 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             });
             // The main click routine (called by other events above as well)
             a.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
                 // Restore original values for this window/tab
                 appstate.target = kiwixTarget;
                 articleContainer = thisWindow;
@@ -1487,10 +1488,13 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     articleContainer = window.open('article.html', '_blank');
                     appstate.target = 'window';
                     articleContainer.kiwixType = appstate.target;
-                } else if (a.tagName !== 'A') {
-                    // If we are adding event listeners to the document element, do not navigate with an ordinary click 
+                } else if (a.tagName === 'HTML') {
+                    // We have registered a click on the document, but a new tab wasn't requested, so ignore
+                    // and allow any propagated clicks on other elements to run 
                     return;
-                } 
+                }
+                e.preventDefault();
+                e.stopPropagation();
                 var zimUrl = uiUtil.deriveZimUrlFromRelativeUrl(uriComponent, baseUrl);
                 goToArticle(zimUrl, downloadAttrValue, contentType);
             });

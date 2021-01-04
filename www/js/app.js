@@ -1312,8 +1312,6 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         $('#downloadAlert').hide();
 
         var windowLoaded = function() {
-            // articleContainer.onload = function(){};
-            if (articleContainer.document.body) articleContainer.document.body.hidden = false;
             articleDocument = articleContainer.document.documentElement;
             
             $("#articleList").empty();
@@ -1344,6 +1342,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             // Allow back/forward in browser history
             pushBrowserHistoryState(dirEntry.namespace + "/" + dirEntry.url);
 
+            loadCSSJQuery();
             parseAnchorsJQuery();
             loadImagesJQuery();
             // JavaScript is currently disabled, so we need to make the browser interpret noscript tags
@@ -1351,7 +1350,6 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
             // and noscript tags should be ignored
             loadNoScriptTags();
             //loadJavaScriptJQuery();
-            loadCSSJQuery();
             insertMediaBlobsJQuery();
         };
 
@@ -1373,17 +1371,24 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
         .replace(/[^/]+/g, function(m) {
             return encodeURIComponent(m);
         });
+        // Hide the document to avoid display flash before stylesheets are loaded; also improves performance during loading of
+        // assets in most browsers (the document will be unhidden again by renderIfCSSFulfilled).
+        // DEV: We cannot do `articleContainer.document.documentElement.hidden = true;` because documentElement gets overwritten
+        // during the document.write() process; and since the latter is synchronous, we get slow display rewrites before it is
+        // effective if we do it after document.close().
+        htmlArticle = htmlArticle.replace(/(<html\b[^>]*)>/i, '$1 hidden>');
         // Write article html to the article container
         articleContainer.document.open('text/html', 'replace');
         articleContainer.document.write(htmlArticle);
-        // Hide the document to avoid display flash before stylesheets are loaded
-        if (articleContainer.document.body) articleContainer.document.body.hidden = true;
         articleContainer.document.close();
         if (appstate.target === 'window') articleContainer.onpopstate = historyPop;
-        // DEV: we can no longer use articleContainer.onload to run this function because IE (and Edge Legacy) do not provide the
-        // onload event for newly opened windows/tabs. However, document.write followed by document.close is synchronous, so an
-        // event loader should not be necessary
-        setTimeout(windowLoaded, 0);
+        // IE (and Edge Legacy) do not provide the onload event for newly opened windows/tabs. However, document.write()
+        // followed by document.close() is synchronous in these browsers, so an event loader is unnecessary.
+        if (articleContainer.onload) {
+            articleContainer.onload = windowLoaded;
+        } else {
+            windowLoaded();
+        }
         
         function parseAnchorsJQuery() {
             var currentProtocol = location.protocol;
@@ -1414,20 +1419,20 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                     anchor.target = '_blank';
                 } else {
                     // It's a link to an article or file in the ZIM
-                    addListenersToAnchor(anchor, href);
+                    addListenersToLink(anchor, href);
                 }
             });
             // Add event listeners to the main document so user can open current document in new tab or window
-            addListenersToAnchor(articleDocument, encodeURIComponent(dirEntry.url.replace(/[^/]+\//g, '')));
+            addListenersToLink(articleDocument, encodeURIComponent(dirEntry.url.replace(/[^/]+\//g, '')));
         }
 
         /**
-         * Add event listeners to the anchor to extract the linked article or file from the ZIM instead
+         * Add event listeners to a hyperlinked element to extract the linked article or file from the ZIM instead
          * of following links
-         * @param {Node} a The anchor to which event listeners will be attached
-         * @param {String} href The href of the anchor 
+         * @param {Node} a The anchor or other linked element to which event listeners will be attached
+         * @param {String} href The href of the linked element 
          */
-        function addListenersToAnchor(a, href) {
+        function addListenersToLink(a, href) {
             var uriComponent = uiUtil.removeUrlParameters(href);
             var contentType;
             var downloadAttrValue;

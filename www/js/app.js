@@ -1449,7 +1449,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                 contentType = a.getAttribute('type');
             }
             // DEV: We need to use the '#' location trick here for cross-browser compatibility with opening a new tab/window
-            a.setAttribute('href', '#');// Store the current values, as they may be changed if user switches to another tab before returning to this one
+            a.setAttribute('href', '#');
+            // Store the current values, as they may be changed if user switches to another tab before returning to this one
             var kiwixTarget = appstate.target;
             var thisWindow = articleContainer;
             // Establish a variable for tracking long press
@@ -1458,7 +1459,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                 if (!params.rightClickOpensTab) return;
                 touched = true;
                 // The link will be clicked if the user long-presses for more than 600ms (if the option is enabled)
-                setTimeout(function() {
+                setTimeout(function () {
                     if (!touched) return;
                     a.click();
                 }, 600);
@@ -1474,7 +1475,8 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
                 touched = true;
                 a.click();
             });
-            a.addEventListener('mousedown', function(e) {
+            // This detects the middle-click event
+            a.addEventListener('mousedown', function (e) {
                 if (e.which === 2 || e.button === 4) {
                     e.preventDefault();
                     touched = true;
@@ -1639,7 +1641,7 @@ define(['jquery', 'zimArchiveLoader', 'uiUtil', 'settingsStore','abstractFilesys
 
         function insertMediaBlobsJQuery() {
             var media = articleDocument.querySelectorAll('video, audio, source, track');
-            Array.prototype.slice.call(media).forEach(function(mediaSource) {
+            Array.prototype.slice.call(media).forEach(function (mediaSource) {
                 var source = mediaSource.getAttribute('src');
                 source = source ? uiUtil.deriveZimUrlFromRelativeUrl(source, baseUrl) : null;
                 // We have to exempt text tracks from using deriveZimUrlFromRelativeurl due to a bug in Firefox [kiwix-js #496]

@@ -60,7 +60,8 @@ module.exports = {
         "browserName": "firefox",
         "javascriptEnabled": true,
         "acceptSslCerts": true,
-        "build": build
+        "build": build,
+        "extendedDebugging": true
       }
     },
     "chrome58" : {
